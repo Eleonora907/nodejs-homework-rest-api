@@ -2,7 +2,9 @@ const express = require("express");
 
 const ctrl = require("../../controllers/contacts");
 
-const { validateBody, isValidId } = require("../../middlewares");
+const {validateBody} = require("../../decorators");
+
+const {authenticate, isValidId} = require("../../middlewares");
 
 const schemas = require("../../schemas/contacts");
 
@@ -12,6 +14,8 @@ const updateContactFavoriteValidate = validateBody(
 );
 
 const router = express.Router();
+
+router.use(authenticate);
 
 router.get("/", ctrl.getAll);
 
