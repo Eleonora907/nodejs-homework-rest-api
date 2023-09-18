@@ -1,14 +1,22 @@
+const fs = require("fs/promises");
+const path = require("path")
+
 const Contact = require("../models/Contact");
 
 const { HttpError } = require("../helpers");
 
 const { ctrlWrapper } = require("../decorators");
 
+const avatarsPath = path.resolve("public", "avatars");
+
 const getAll = async (req, res) => {
-  const {_id: owner} = req.user;
-    const {page = 1, limit = 20} = req.query;
-    const skip = (page - 1) * limit;
-  const result = await Contact.find({owner}, "-createdAt -updatedAt", {skip, limit}).populate("owner", "name");;
+  const { _id: owner } = req.user;
+  const { page = 1, limit = 20 } = req.query;
+  const skip = (page - 1) * limit;
+  const result = await Contact.find({ owner }, "-createdAt -updatedAt", {
+    skip,
+    limit,
+  }).populate("owner", "name");
   res.json(result);
 };
 
@@ -22,8 +30,14 @@ const getById = async (req, res) => {
 };
 
 const add = async (req, res) => {
-  const {_id: owner} = req.user;
-  const result = await Contact.create({...req.body, owner});
+  const { _id: owner } = req.user;
+
+  const {path: oldPath, filename} = req.file;
+    const newPath = path.join(avatarsPath, filename);
+    await fs.rename(oldPath, newPath);
+    const avatar = path.join("avatars", filename);
+
+  const result = await Contact.create({ ...req.body, avatar, owner });
   if (!result) {
     throw HttpError(
       400,

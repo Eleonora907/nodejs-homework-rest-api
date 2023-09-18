@@ -2,9 +2,9 @@ const express = require("express");
 
 const ctrl = require("../../controllers/contacts");
 
-const {validateBody} = require("../../decorators");
+const { validateBody } = require("../../decorators");
 
-const {authenticate, isValidId} = require("../../middlewares");
+const { authenticate, upload, isValidId } = require("../../middlewares");
 
 const schemas = require("../../schemas/contacts");
 
@@ -21,7 +21,7 @@ router.get("/", ctrl.getAll);
 
 router.get("/:contactId", isValidId, ctrl.getById);
 
-router.post("/", addContactValidate, ctrl.add);
+router.post("/", upload.single("avatar"), addContactValidate, ctrl.add);
 
 router.patch(
   "/:contactId/favorite",

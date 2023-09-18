@@ -1,5 +1,9 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const gravatar = require("gravatar");
+const path = require("path");
+const fs = require("fs/promises");
+const jimp = require("jimp");
 
 const User = require("../models/User");
 
@@ -7,70 +11,107 @@ const { HttpError } = require("../helpers");
 
 const { ctrlWrapper } = require("../decorators");
 
-const {JWT_SECRET} = process.env;
+const avatarsPath = path.resolve("public", "avatars");
 
-const signup = async(req, res) => {
-    const {email, password} = req.body;
-    const user = await User.findOne({email});
-    if(user) {
-        throw HttpError(409, "Email already exist");
-    }
-    
-    const hashPassword = await bcrypt.hash(password, 10);
+const { JWT_SECRET } = process.env;
 
-    const newUser = await User.create({...req.body, password: hashPassword});
+const signup = async (req, res) => {
+  const { email, password } = req.body;
+  const user = await User.findOne({ email });
+  if (user) {
+    throw HttpError(409, "Email already exist");
+  }
 
-    res.status(201).json({
-        name: newUser.name,
-        email: newUser.email,
-    })
-}
+  const hashPassword = await bcrypt.hash(password, 10);
+  const avatarURL = gravatar.url(email);
 
-const signin = async(req, res)=> {
-    const {email, password} = req.body;
-    const user = await User.findOne({email});
-    if(!user) {
-        throw HttpError(401, "Email or password invalid");
-    }
+  const newUser = await User.create({
+    ...req.body,
+    password: hashPassword,
+    avatarURL,
+  });
 
-    const passwordCompare = await bcrypt.compare(password, user.password);
-    if(!passwordCompare) {
-        throw HttpError(401, "Email or password invalid");
-    }
+  // res.status(201).json({
+  //     name: newUser.name,
+  //     email: newUser.email,
+  // })
+  res.status(201).json({
+    user: {
+      email: newUser.email,
+      subscription: newUser.subscription,
+    },
+  });
+};
 
-    const payload = {
-        id: user._id,
-    }
+const signin = async (req, res) => {
+  const { email, password } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw HttpError(401, "Email or password invalid");
+  }
 
-    const token = jwt.sign(payload, JWT_SECRET, {expiresIn: "23h"});
-    await User.findByIdAndUpdate(user._id, {token});
+  const passwordCompare = await bcrypt.compare(password, user.password);
+  if (!passwordCompare) {
+    throw HttpError(401, "Email or password invalid");
+  }
 
-    res.json({
-        token,
-    })
-}
+  const payload = {
+    id: user._id,
+  };
 
-const getCurrent = (req, res)=> {
-    const {name, email} = req.user;
+  const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "23h" });
+  await User.findByIdAndUpdate(user._id, { token });
 
-    res.json({
-        name,
-        email,
-    })
-}
+  res.json({
+    token,
+  });
+};
 
-const signout = async(req, res)=> {
-    const {_id} = req.user;
-    await User.findByIdAndUpdate(_id, {token: ""});
+const getCurrent = (req, res) => {
+  // const {name, email} = req.user;
 
-    res.json({
-        message: "Signuot success"
-    })
-}
+  // res.json({
+  //     name,
+  //     email,
+  // })
+  const { email, subscription } = req.user;
+
+  res.json({
+    email,
+    subscription,
+  });
+};
+
+const signout = async (req, res) => {
+  const { _id } = req.user;
+  await User.findByIdAndUpdate(_id, { token: "" });
+
+  res.json({
+    message: "Signuot success",
+  });
+};
+
+const updateAvatar = async (req, res) => {
+  const { _id } = req.user;
+  const { path: oldPath, filename } = req.file;
+  const newPath = path.join(avatarsPath, filename);
+  const image = await jimp.read(oldPath);
+  image.resize(250, 250);
+  await image.writeAsync(newPath);
+  const avatarURL = path.join("avatars", filename);
+  await User.findByIdAndUpdate(_id, { avatarURL });
+
+  await fs.unlink(oldPath);
+
+  res.json({
+    avatarURL,
+  });
+};
 
 module.exports = {
-    signup: ctrlWrapper(signup),
-    signin: ctrlWrapper(signin),
-    getCurrent: ctrlWrapper(getCurrent),
-    signout: ctrlWrapper(signout),
-}
+  signup: ctrlWrapper(signup),
+  signin: ctrlWrapper(signin),
+  getCurrent: ctrlWrapper(getCurrent),
+  signout: ctrlWrapper(signout),
+  updateAvatar: ctrlWrapper(updateAvatar),
+};
