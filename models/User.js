@@ -2,7 +2,7 @@ const { Schema, model } = require("mongoose");
 
 const { handleValidateError, runUpdateValidators } = require("./hooks");
 
-const {emailRegexp}=require("../constants/user-constants")
+const { emailRegexp } = require("../constants/user-constants");
 
 const userSchema = new Schema(
   {
@@ -25,6 +25,18 @@ const userSchema = new Schema(
       type: String,
       enum: ["starter", "pro", "business"],
       default: "starter",
+    },
+    avatar: {
+      type: String,
+      required: true,
+    },
+    verify: {
+      type: Boolean,
+      default: false,
+    },
+    verificationCode: {
+      type: String,
+      required: [true, "Verify token is required"],
     },
     token: String,
   },
