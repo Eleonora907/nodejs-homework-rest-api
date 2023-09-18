@@ -5,7 +5,6 @@ const addSchema = Joi.object({
   email: Joi.string().required(),
   phone: Joi.string().required(),
   favorite: Joi.boolean(),
-  
 });
 
 const contactUpdateFavoriteSchema = Joi.object({
